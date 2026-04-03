@@ -1,93 +1,118 @@
-# 🪙 XENEA Token (ERC-20)
+# 🪙 XENEA Token + Staking
 
-Deploy token ERC-20 **XENEA** dengan supply 1 Billion ke jaringan **XENEA Chain (1096)**.
+Deploy **XENEA** ERC-20 token + **Staking Contract** ke XENEA Chain (1096).
 
-## Info Token
+## Contracts
 
+### 1. XENEA Token (ERC-20)
 | Field | Value |
 |-------|-------|
 | Name | XENEA |
 | Ticker | XENEA |
 | Supply | 1,000,000,000 (1B) |
 | Decimals | 18 |
-| Chain | XENEA (Chain ID: 1096) |
-| RPC | https://rpc-ubusuna.xeneascan.com |
-| Explorer | https://ubusuna.xeneascan.com |
 
-## Requirements
+### 2. Staking Contract
+| Feature | Detail |
+|---------|--------|
+| Stake | TokenA atau TokenB |
+| Reward | XENEA token |
+| Rate | **0.001 XENEA per menit** per 100,000 token staked |
+| Lock | Tidak ada (bebas unstake kapan saja) |
+| Functions | `stakeTokenA`, `stakeTokenB`, `unstakeTokenA`, `unstakeTokenB`, `claim`, `exitAll` |
 
-- **Node.js** v18+
-- **npm** atau **yarn**
-- **TXENE** (native token) untuk gas fee
+### Reward Calculation
+```
+reward = (jumlah_staked / 100,000) × 0.001 XENEA × menit
+```
+Contoh: Stake 500,000 TokenA selama 60 menit = `(500000/100000) × 0.001 × 60 = 0.3 XENEA`
 
 ## Setup
 
-### 1. Install dependencies
+### 1. Install
 
 ```bash
 cd xenea-token
 npm install
 ```
 
-### 2. Setup private key
+### 2. Config `.env`
 
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-Isi `PRIVATE_KEY` dengan private key wallet kamu (tanpa `0x`):
-
-```
-PRIVATE_KEY=abc123your_private_key_here
+Isi:
+```env
+PRIVATE_KEY=your_private_key_here
+TOKEN_A=0x...address_tokenA...
+TOKEN_B=0x...address_tokenB...
 ```
 
 ### 3. Pastikan punya TXENE untuk gas
 
-Cek balance di: https://ubusuna.xeneascan.com/address/WALLET_KAMU
+## Deploy
 
-## Deploy & Verify
+### Deploy semua sekaligus (XENEA Token + Staking + Fund + Verify):
 
-Satu command langsung deploy + auto verify:
+```bash
+npx hardhat run scripts/deploy-all.cjs --network xenea
+```
+
+Ini akan:
+1. Deploy XENEA Token (1B supply)
+2. Deploy Staking Contract (TokenA, TokenB → XENEA reward)
+3. Fund 100M XENEA ke staking contract
+4. Auto verify kedua contract di explorer
+
+### Deploy XENEA Token saja:
 
 ```bash
 npx hardhat run scripts/deploy.cjs --network xenea
 ```
 
-Output:
-```
-🚀 Deploying XENEA Token
-👛 Deployer: 0x...
-⏳ Deploying...
-✅ XENEA Token deployed!
-📄 Contract: 0x...
-🔍 Verifying contract...
-✅ Contract verified!
-```
-
-## Verify Manual (kalau auto gagal)
+## Verify Manual
 
 ```bash
-npx hardhat verify --network xenea CONTRACT_ADDRESS
+# XENEA Token
+npx hardhat verify --network xenea TOKEN_ADDRESS
+
+# Staking Contract
+npx hardhat verify --network xenea STAKING_ADDRESS TOKEN_A TOKEN_B XENEA_ADDRESS
 ```
 
-## Cek Token
+## Staking Functions
 
-Setelah deploy, semua 1B XENEA langsung masuk ke wallet deployer.
+| Function | Keterangan |
+|----------|-----------|
+| `stakeTokenA(amount)` | Stake TokenA |
+| `stakeTokenB(amount)` | Stake TokenB |
+| `unstakeTokenA(amount)` | Unstake sebagian/semua TokenA |
+| `unstakeTokenB(amount)` | Unstake sebagian/semua TokenB |
+| `claim()` | Ambil reward XENEA |
+| `exitAll()` | Unstake semua + claim reward (1 tx) |
+| `pendingReward(address)` | Cek reward yang belum di-claim |
+| `rewardsAvailable()` | Cek sisa XENEA di contract |
 
-Lihat di explorer: `https://ubusuna.xeneascan.com/address/CONTRACT_ADDRESS`
+## Owner Functions
 
-## Struktur File
+| Function | Keterangan |
+|----------|-----------|
+| `fundRewards(amount)` | Tambah XENEA ke reward pool |
+| `emergencyWithdraw(token, amount)` | Tarik token stuck (darurat) |
+
+## File Structure
 
 ```
 xenea-token/
 ├── contracts/
-│   └── XENEA.sol          # Smart contract ERC-20
+│   ├── XENEA.sol              # ERC-20 token
+│   └── XENEAStaking.sol       # Staking contract
 ├── scripts/
-│   └── deploy.cjs         # Deploy + verify script
-├── hardhat.config.cjs     # Hardhat config (XENEA chain)
-├── .env.example            # Template private key
-├── .gitignore
-├── package.json
+│   ├── deploy.cjs             # Deploy token saja
+│   └── deploy-all.cjs         # Deploy semua + fund + verify
+├── hardhat.config.cjs
+├── .env.example
 └── README.md
 ```
