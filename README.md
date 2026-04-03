@@ -1,118 +1,92 @@
 # 🪙 XENEA Token + Staking
 
-Deploy **XENEA** ERC-20 token + **Staking Contract** ke XENEA Chain (1096).
+## Scripts
 
-## Contracts
+Semua script terpisah, jalankan satu-satu sesuai urutan.
 
-### 1. XENEA Token (ERC-20)
-| Field | Value |
-|-------|-------|
-| Name | XENEA |
-| Ticker | XENEA |
-| Supply | 1,000,000,000 (1B) |
-| Decimals | 18 |
-
-### 2. Staking Contract
-| Feature | Detail |
-|---------|--------|
-| Stake | TokenA atau TokenB |
-| Reward | XENEA token |
-| Rate | **0.001 XENEA per menit** per 100,000 token staked |
-| Lock | Tidak ada (bebas unstake kapan saja) |
-| Functions | `stakeTokenA`, `stakeTokenB`, `unstakeTokenA`, `unstakeTokenB`, `claim`, `exitAll` |
-
-### Reward Calculation
-```
-reward = (jumlah_staked / 100,000) × 0.001 XENEA × menit
-```
-Contoh: Stake 500,000 TokenA selama 60 menit = `(500000/100000) × 0.001 × 60 = 0.3 XENEA`
-
-## Setup
-
-### 1. Install
+### Deploy (urut 1→4)
 
 ```bash
-cd xenea-token
-npm install
+# 1. Deploy TokenA
+npx hardhat run scripts/1-deploy-tokenA.cjs --network xenea
+# → copy address ke .env: TOKEN_A=0x...
+
+# 2. Deploy TokenB
+npx hardhat run scripts/2-deploy-tokenB.cjs --network xenea
+# → copy address ke .env: TOKEN_B=0x...
+
+# 3. Deploy XENEA Token (1B supply)
+npx hardhat run scripts/3-deploy-xenea.cjs --network xenea
+# → copy address ke .env: XENEA_TOKEN=0x...
+
+# 4. Deploy Staking + Fund 100M XENEA reward
+npx hardhat run scripts/4-deploy-staking.cjs --network xenea
+# → copy address ke .env: STAKING_CONTRACT=0x...
 ```
 
-### 2. Config `.env`
+### Interact
 
 ```bash
-cp .env.example .env
-nano .env
+# Stake TokenA (100,000)
+STAKE_TOKEN=A STAKE_AMOUNT=100000 npx hardhat run scripts/stake.cjs --network xenea
+
+# Stake TokenB (50,000)
+STAKE_TOKEN=B STAKE_AMOUNT=50000 npx hardhat run scripts/stake.cjs --network xenea
+
+# Unstake TokenA (semua)
+STAKE_TOKEN=A UNSTAKE_AMOUNT=all npx hardhat run scripts/unstake.cjs --network xenea
+
+# Unstake TokenB (sebagian)
+STAKE_TOKEN=B UNSTAKE_AMOUNT=25000 npx hardhat run scripts/unstake.cjs --network xenea
+
+# Claim reward XENEA
+npx hardhat run scripts/claim.cjs --network xenea
+
+# Cek status
+npx hardhat run scripts/status.cjs --network xenea
 ```
 
-Isi:
+## .env Config
+
 ```env
-PRIVATE_KEY=your_private_key_here
-TOKEN_A=0x...address_tokenA...
-TOKEN_B=0x...address_tokenB...
+PRIVATE_KEY=your_private_key
+
+# Token addresses (isi setelah deploy)
+TOKEN_A=0x...
+TOKEN_B=0x...
+XENEA_TOKEN=0x...
+STAKING_CONTRACT=0x...
+
+# Optional: nama/symbol untuk MockToken
+TOKEN_A_NAME=Token A
+TOKEN_A_SYMBOL=TKA
+TOKEN_B_NAME=Token B
+TOKEN_B_SYMBOL=TKB
+
+# Optional: jumlah reward (default 100M)
+REWARD_AMOUNT=100000000
 ```
 
-### 3. Pastikan punya TXENE untuk gas
+## Reward Rate
 
-## Deploy
+**0.001 XENEA per menit** per 100,000 token staked
 
-### Deploy semua sekaligus (XENEA Token + Staking + Fund + Verify):
-
-```bash
-npx hardhat run scripts/deploy-all.cjs --network xenea
-```
-
-Ini akan:
-1. Deploy XENEA Token (1B supply)
-2. Deploy Staking Contract (TokenA, TokenB → XENEA reward)
-3. Fund 100M XENEA ke staking contract
-4. Auto verify kedua contract di explorer
-
-### Deploy XENEA Token saja:
-
-```bash
-npx hardhat run scripts/deploy.cjs --network xenea
-```
-
-## Verify Manual
-
-```bash
-# XENEA Token
-npx hardhat verify --network xenea TOKEN_ADDRESS
-
-# Staking Contract
-npx hardhat verify --network xenea STAKING_ADDRESS TOKEN_A TOKEN_B XENEA_ADDRESS
-```
-
-## Staking Functions
-
-| Function | Keterangan |
-|----------|-----------|
-| `stakeTokenA(amount)` | Stake TokenA |
-| `stakeTokenB(amount)` | Stake TokenB |
-| `unstakeTokenA(amount)` | Unstake sebagian/semua TokenA |
-| `unstakeTokenB(amount)` | Unstake sebagian/semua TokenB |
-| `claim()` | Ambil reward XENEA |
-| `exitAll()` | Unstake semua + claim reward (1 tx) |
-| `pendingReward(address)` | Cek reward yang belum di-claim |
-| `rewardsAvailable()` | Cek sisa XENEA di contract |
-
-## Owner Functions
-
-| Function | Keterangan |
-|----------|-----------|
-| `fundRewards(amount)` | Tambah XENEA ke reward pool |
-| `emergencyWithdraw(token, amount)` | Tarik token stuck (darurat) |
+| Staked | Per Menit | Per Jam | Per Hari |
+|--------|-----------|---------|----------|
+| 100,000 | 0.001 | 0.06 | 1.44 |
+| 500,000 | 0.005 | 0.30 | 7.20 |
+| 1,000,000 | 0.010 | 0.60 | 14.40 |
 
 ## File Structure
 
 ```
-xenea-token/
-├── contracts/
-│   ├── XENEA.sol              # ERC-20 token
-│   └── XENEAStaking.sol       # Staking contract
-├── scripts/
-│   ├── deploy.cjs             # Deploy token saja
-│   └── deploy-all.cjs         # Deploy semua + fund + verify
-├── hardhat.config.cjs
-├── .env.example
-└── README.md
+scripts/
+├── 1-deploy-tokenA.cjs    # Deploy TokenA
+├── 2-deploy-tokenB.cjs    # Deploy TokenB
+├── 3-deploy-xenea.cjs     # Deploy XENEA token
+├── 4-deploy-staking.cjs   # Deploy staking + fund rewards
+├── stake.cjs              # Stake TokenA/B
+├── unstake.cjs            # Unstake TokenA/B
+├── claim.cjs              # Claim XENEA rewards
+└── status.cjs             # Cek posisi & reward
 ```
